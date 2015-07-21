@@ -233,13 +233,13 @@ public abstract class TomcatFailoverIntegrationTest {
         final String sessionId1 = post( _httpClient, TC_PORT_1, null, key, value ).getSessionId();
         assertEquals( format.extractJvmRoute( sessionId1 ), JVM_ROUTE_1 );
 
-        final Object session = _client.get( sessionId1 );
+        final Object session = _client.get( format.stripJvmRoute(sessionId1) );
         assertNotNull( session, "Session not found in memcached: " + sessionId1 );
 
         final Response response = get( _httpClient, TC_PORT_2, sessionId1 );
         final String sessionId2 = response.getSessionId();
-        assertNull( _client.get( sessionId1 ) );
-        assertNotNull( _client.get( sessionId2 ) );
+        assertNotNull(_client.get(format.stripJvmRoute(sessionId1)));
+        assertNotNull( _client.get( format.stripJvmRoute(sessionId2) ) );
 
         assertEquals( format.stripJvmRoute( sessionId1 ), format.stripJvmRoute( sessionId2 ) );
         assertEquals( format.extractJvmRoute( sessionId2 ), JVM_ROUTE_2 );
@@ -287,17 +287,18 @@ public abstract class TomcatFailoverIntegrationTest {
         /* request the session on tomcat2
          */
         final Response response = get( _httpClient, TC_PORT_2, sessionId1 );
-        assertEquals( format.stripJvmRoute( sessionId1 ), format.stripJvmRoute( response.getSessionId() ) );
+        String sessionId2 = response.getSessionId();
+        assertEquals( format.stripJvmRoute( sessionId1 ), format.stripJvmRoute(sessionId2) );
         assertEquals( 2, _daemon.getCache().getSetCmds() );
 
         /* post key/value already stored in the session again (on tomcat2)
          */
-        post( _httpClient, TC_PORT_2, sessionId1, key, value );
+        post( _httpClient, TC_PORT_2, sessionId2, key, value );
         assertEquals( 2, _daemon.getCache().getSetCmds() );
 
         /* post another key/value pair (on tomcat2)
          */
-        post( _httpClient, TC_PORT_2, sessionId1, "bar", "baz" );
+        post( _httpClient, TC_PORT_2, sessionId2, "bar", "baz" );
         assertEquals( 3, _daemon.getCache().getSetCmds() );
 
         Thread.sleep( 10 );
